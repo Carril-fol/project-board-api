@@ -1,0 +1,117 @@
+from datetime import datetime, timedelta, timezone
+
+import jwt
+from jwt import ExpiredSignatureError, InvalidTokenError
+
+from fastapi import Depends, HTTPException, Request
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+
+from shared.config.settings import Config
+
+
+class JwtManager:
+    SECRET_KEY = Config.SECRET_KEY
+    ALGORITHM = "HS256"
+
+    @classmethod
+    def create_access_token(cls, user_id: int) -> str:
+        payload = {
+            "sub": str(user_id),
+            "type": "access_token",
+            "exp": datetime.now(timezone.utc) + timedelta(minutes=15)
+        }
+
+        return jwt.encode(
+            payload,
+            cls.SECRET_KEY,
+            algorithm=cls.ALGORITHM
+        )
+
+    @classmethod
+    def create_refresh_token(cls, user_id: int) -> str:
+        payload = {
+            "sub": str(user_id),
+            "type": "refresh_token",
+            "exp": datetime.now(timezone.utc) + timedelta(days=7)
+        }
+
+        return jwt.encode(
+            payload,
+            cls.SECRET_KEY,
+            algorithm=cls.ALGORITHM
+        )
+    
+    @classmethod
+    def decode_token(cls, token: str) -> dict:
+        try:
+
+            print("TOKEN TO DECODE:", token)
+            print("SECRET:", cls.SECRET_KEY)
+
+            payload = jwt.decode(
+                token,
+                cls.SECRET_KEY,
+                algorithms=[cls.ALGORITHM]
+            )
+
+            return payload
+
+        except ExpiredSignatureError:
+            raise HTTPException(
+                status_code=401,
+                detail="Token expired"
+            )
+
+        except InvalidTokenError as e:
+            print("JWT ERROR:", e)
+            
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid token"
+            )
+        
+    @classmethod
+    def validate_token(cls, token: str, type_wanted: str) -> dict:
+        payload = cls.decode_token(token)
+
+        if payload.get("type") != type_wanted:
+            raise HTTPException(
+                status_code=401,
+                detail=f"Invalid {type_wanted} token"
+            )
+
+        return payload
+
+
+security = HTTPBearer()
+
+
+def get_access_token_from_cookie(request: Request) -> str:
+    token = request.cookies.get("access_token")
+
+    print("COOKIE TOKEN:", token)
+
+    if not token:
+        raise HTTPException(
+            status_code=401,
+            detail="Access token not found"
+        )
+
+    return token
+
+def get_refresh_token_from_cookie(request: Request) -> str:
+    token = request.cookies.get("refresh_token")
+
+    if not token:
+        raise HTTPException(
+            status_code=401,
+            detail="Refresh token not found"
+        )
+
+    return token
+
+def jwt_required(token: str = Depends(get_access_token_from_cookie)):
+    return JwtManager.validate_token(
+        token,
+        "access_token"
+    )
