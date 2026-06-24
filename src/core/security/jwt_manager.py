@@ -44,10 +44,6 @@ class JwtManager:
     @classmethod
     def decode_token(cls, token: str) -> dict:
         try:
-
-            print("TOKEN TO DECODE:", token)
-            print("SECRET:", cls.SECRET_KEY)
-
             payload = jwt.decode(
                 token,
                 cls.SECRET_KEY,
