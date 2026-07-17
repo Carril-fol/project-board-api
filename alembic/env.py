@@ -2,13 +2,17 @@ import sys
 from logging.config import fileConfig
 from pathlib import Path
 
-from sqlalchemy import engine_from_config
-from sqlalchemy import pool
+from sqlalchemy import engine_from_config, pool
 
 from alembic import context
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
+from collaborators.models.collaborators_model import Collaborators
+from project_invitations.models.project_invitation_model import ProjectInvitation
+from projects.models.project import Project
+from projects_tags.models.project_tag_model import ProjectTag
+from requests.models.requests_model import Request
 from shared.config.settings import Config
 from shared.database import Base
 from users.models.user import User  # noqa: F401
@@ -69,9 +73,7 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        context.configure(
-            connection=connection, target_metadata=target_metadata
-        )
+        context.configure(connection=connection, target_metadata=target_metadata)
 
         with context.begin_transaction():
             context.run_migrations()
