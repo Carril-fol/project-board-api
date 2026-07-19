@@ -1,6 +1,7 @@
 from enum import Enum
 from typing import Optional
-from pydantic import BaseModel, ConfigDict, field_validator, Field
+
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class ProjectStatus(str, Enum):
@@ -44,13 +45,13 @@ class ProjectCreateSchema(BaseModel):
     max_collaborators: int = Field(gt=0)
     owner_id: int
 
-    @field_validator("name", "status", mode='before')
+    @field_validator("name", "status", mode="before")
     @classmethod
     def convert_to_uppercase(cls, value):
         if isinstance(value, str):
             return value.upper()
         return value
-    
+
 
 class ProjectUpdateSchema(BaseModel):
     name: Optional[str] = None
@@ -59,7 +60,7 @@ class ProjectUpdateSchema(BaseModel):
     max_collaborators: Optional[int] = None
     owner_id: int
 
-    @field_validator("name", "status", mode='before')
+    @field_validator("name", "status", mode="before")
     @classmethod
     def convert_to_uppercase(cls, value):
         if isinstance(value, str):
@@ -67,7 +68,8 @@ class ProjectUpdateSchema(BaseModel):
         return value
 
 
-class ProjectDetail(BaseModel):    
+class ProjectDetail(BaseModel):
+    id: int
     name: str
     status: str
     description: str

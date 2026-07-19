@@ -1,17 +1,23 @@
-from datetime import datetime
-from sqlalchemy import Column, Integer, String, ForeignKey
+from sqlalchemy import ForeignKey, Integer, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 from shared.database import Base
+
 
 class Project(Base):
     __tablename__ = "projects"
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    name = Column(String(100), nullable=False)
-    description = Column(String(500), nullable=True)
-    status = Column(String(20), nullable=False, default="active")
-    max_collaborators = Column(Integer, nullable=False)
-    owner_id = Column(
-        Integer,
+    id: Mapped[int] = mapped_column(primary_key=True, index=True, autoincrement=True)
+    name: Mapped[str] = mapped_column(String(100))
+    description: Mapped[str | None] = mapped_column(String(500))
+    status: Mapped[str] = mapped_column(String(20), default="active")
+    max_collaborators: Mapped[int] = mapped_column(Integer)
+
+    owner_id: Mapped[int] = mapped_column(
         ForeignKey("users.id"),
-        nullable=False
+        nullable=False,
     )
-    
+
+    collaborators: Mapped[list["Collaborators"]] = relationship(
+        "Collaborators",
+        back_populates="project",
+    )
