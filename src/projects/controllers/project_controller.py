@@ -43,7 +43,9 @@ class ProjectController:
         except ProjectNotFound:
             raise HTTPException(status_code=404, detail="Project not found.")
 
-    @router.patch("/update/{id}", response_model=UpdateProjectOutputSchema, status_code=200)
+    @router.patch(
+        "/update/{id}", response_model=UpdateProjectOutputSchema, status_code=200
+    )
     async def update_project(self, id: int, data: UpdateProjectInputSchema):
         try:
             user_id = self.payload["sub"]
@@ -57,7 +59,9 @@ class ProjectController:
                 status_code=404, detail="You don't have privileges for this action."
             )
 
-    @router.delete("/delete/{id}", response_model=DeleteProjectOutputSchema, status_code=200)
+    @router.delete(
+        "/delete/{id}", response_model=DeleteProjectOutputSchema, status_code=200
+    )
     async def delete_project(self, id: int):
         try:
             user_id = self.payload["sub"]
