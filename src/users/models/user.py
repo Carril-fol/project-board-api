@@ -1,15 +1,31 @@
 from datetime import datetime
-from sqlalchemy import Column, Integer, String, DateTime
+from typing import Optional
+
+from sqlalchemy import DateTime, Integer, String
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
 from shared.database import Base
+
 
 class User(Base):
     __tablename__ = "users"
-    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
-    first_name = Column(String, nullable=False)
-    last_name = Column(String, nullable=False)
-    username = Column(String, nullable=True)
-    bio = Column(String, nullable=True)
-    email = Column(String, nullable=False, unique=True)
-    password = Column(String, nullable=False)
-    date_created = Column(DateTime, nullable=False, default=datetime.now)
-    date_updated = Column(DateTime, nullable=False, default=datetime.now)
+    id: Mapped[int] = mapped_column(
+        Integer,
+        primary_key=True,
+        index=True,
+        autoincrement=True,
+    )
+    first_name: Mapped[str] = mapped_column(String, nullable=False)
+    last_name: Mapped[str] = mapped_column(String, nullable=False)
+    username: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    bio: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    email: Mapped[str] = mapped_column(String, nullable=False, unique=True)
+    password: Mapped[str] = mapped_column(String, nullable=False)
+    date_created: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=datetime.now
+    )
+    date_updated: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, default=datetime.now
+    )
+
+    collaborators = relationship("Collaborators", back_populates="user")
