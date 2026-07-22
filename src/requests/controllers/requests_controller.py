@@ -45,7 +45,7 @@ class RequestsController:
     @router.post(
         "/approve/{request_id}",
         response_model=RequestOutputSchema,
-        status_code=200,
+        status_code=201,
     )
     def approve(self, request_id: int):
         user_id = self.payload["sub"]
