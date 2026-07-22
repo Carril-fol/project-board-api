@@ -1,2 +1,0 @@
-class ProjectTagNotFound(Exception):
-    pass
