@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class RequestStatus(str, Enum):
@@ -12,13 +12,20 @@ class RequestStatus(str, Enum):
 
 class RegisterRequestsInputSchema(BaseModel):
     message: Optional[str]
+    role: str
 
 
 class CreateRequestSchema(BaseModel):
     message: Optional[str]
+    role: str
     project_id: int
     user_id: int
     status: RequestStatus = Field(default=RequestStatus.PENDING)
+
+    @field_validator("role")
+    @classmethod
+    def upper_value(cls, v):
+        return v.upper()
 
     @field_validator("project_id", "user_id")
     @classmethod
@@ -33,6 +40,8 @@ class UpdateRequestSchema(BaseModel):
 
 
 class DetailRequestSchema(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     message: Optional[str]
     project_id: int
