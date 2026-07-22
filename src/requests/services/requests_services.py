@@ -1,4 +1,5 @@
 from collaborators.exceptions import CollaboratorAlreadyExists
+from collaborators.models.collaborators_model import Collaborators
 from collaborators.repositories.collaborator_repository import CollaboratorRepository
 from project_invitations.repositories.project_invitation_repository import (
     ProjectInvitationRepository,
@@ -6,7 +7,7 @@ from project_invitations.repositories.project_invitation_repository import (
 from projects.exceptions.project_exception import ProjectNotFound
 from projects.repositories.project_repository import ProjectRepository
 
-from ..exceptions import RequestNotFound
+from ..exceptions import RequestAlreadyExists, RequestNotFound
 from ..models.requests_model import Request
 from ..repositories.requests_repository import RequestsRepository
 from ..schemas.requests_schemas import (
@@ -36,6 +37,14 @@ class RequestsService:
         user_id: int,
         project_id: int,
     ):
+        requests_exists = (
+            self.requests_repository.get_request_by_user_id_and_project_id(
+                user_id, project_id
+            )
+        )
+        if requests_exists:
+            raise RequestAlreadyExists("Request already exists")
+
         project_invitations = self.project_invitations_repo.get_project_invitation_by_project_id_and_user_id(
             project_id, user_id
         )
@@ -65,11 +74,14 @@ class RequestsService:
         if not project:
             raise ProjectNotFound("Project not found")
 
-        if project.owner_id != user_id:
+        if int(project.owner_id) != int(user_id):
             raise PermissionError("Only the project owner can approve requests")
 
         if accepted and request.status == RequestStatus.PENDING:
             request.status = RequestStatus.APPROVED
+            self.collaborator_repository.create_collaborator(
+                Collaborators(id_user=user_id, id_project=project.id, role=request.role)
+            )
         else:
             request.status = RequestStatus.REJECTED
 
@@ -84,9 +96,7 @@ class RequestsService:
             raise PermissionError("Only the project owner can view requests")
 
         requests = self.requests_repository.get_requests_by_project_id(project_id)
-        return [
-            DetailRequestSchema.model_validate(request.__dict__) for request in requests
-        ]
+        return [DetailRequestSchema.model_validate(request) for request in requests]
 
     def get_request(self, request_id: int, user_id: int):
         request = self.requests_repository.get_request_by_id(request_id)
@@ -102,4 +112,4 @@ class RequestsService:
         ):
             raise PermissionError("Only the request owner can view this request")
 
-        return DetailRequestSchema.model_validate(request.__dict__)
+        return DetailRequestSchema.model_validate(request)
