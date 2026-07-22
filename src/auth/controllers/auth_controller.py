@@ -20,7 +20,6 @@ router = APIRouter(prefix="/auth/api/v1", tags=["auth"])
 @cbv(router)
 class AuthController:
     service: AuthService = Depends(get_auth_service)
-    payload: dict = Depends(jwt_required)
 
     @router.post(
         "/register",
@@ -76,7 +75,8 @@ class AuthController:
         status_code=200,
     )
     def refresh(self, response: Response):
-        user_id = self.payload["sub"]
+        payload: dict = Depends(jwt_required)
+        user_id = payload["sub"]
 
         access_token = JwtManager.create_access_token(user_id=user_id)
         refresh_token = JwtManager.create_refresh_token(user_id=user_id)
