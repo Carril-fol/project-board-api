@@ -1,6 +1,6 @@
 from projects.repositories.project_repository import ProjectRepository
 
-from ..exceptions.project_tag_exceptions import ProjectTagNotFound
+from ..exceptions import ProjectTagNotFound
 from ..models.project_tag_model import ProjectTag
 from ..repositories.project_tag_repository import ProjectTagRepository
 from ..schemas.project_tag_schema import CreateProjectTag, RegisterProjectTagInputSchema

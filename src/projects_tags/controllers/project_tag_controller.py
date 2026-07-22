@@ -4,6 +4,7 @@ from fastapi_restful.cbv import cbv
 from core.security.jwt_manager import jwt_required
 
 from ..dependencies import get_project_tag_service
+from ..exceptions import ProjectTagNotFound
 from ..schemas.project_tag_schema import (
     ProjectTagOutputSchema,
     RegisterProjectTagInputSchema,
@@ -44,5 +45,7 @@ class ProjectTagController:
         try:
             self.service.delete_tag_from_project(id, user_id)
             return ProjectTagOutputSchema(msg="Project tag deleted")
+        except ProjectTagNotFound:
+            return ProjectTagOutputSchema(msg="Project tag not found")
         except Exception as error:
             return ProjectTagOutputSchema(msg=str(error))
