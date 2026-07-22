@@ -24,3 +24,13 @@ class RequestsRepository:
     def get_requests_by_project_id(self, project_id: int) -> list[Request]:
         requests = self.db.query(Request).filter(Request.project_id == project_id).all()
         return requests
+
+    def get_request_by_user_id_and_project_id(
+        self, user_id: int, project_id: int
+    ) -> Request | None:
+        request = (
+            self.db.query(Request)
+            .filter(Request.user_id == user_id, Request.project_id == project_id)
+            .first()
+        )
+        return request
