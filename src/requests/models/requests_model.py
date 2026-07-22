@@ -10,6 +10,7 @@ class Request(Base):
     __tablename__ = "requests"
     id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
     status: Mapped[str] = mapped_column(String(255))
+    role: Mapped[str] = mapped_column(String(255))
     message: Mapped[str] = mapped_column(String(255))
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     review_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
