@@ -25,7 +25,9 @@ class RespondInvitationInput(BaseModel):
 
 class CreateInvitationOutput(BaseModel):
     msg: str
-    invite_url: str
+    token: str
+    accept_url: str
+    reject_url: str
 
 
 class ProjectInvitationOutput(BaseModel):

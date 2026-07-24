@@ -49,3 +49,7 @@ class ProjectInvitationRepository:
             )
             .all()
         )
+
+    def update_project_invitation(self, project_invitation: ProjectInvitation):
+        self.db.merge(project_invitation)
+        self.db.flush()
