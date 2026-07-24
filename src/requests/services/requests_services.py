@@ -1,13 +1,17 @@
-from collaborators.exceptions import CollaboratorAlreadyExists
 from collaborators.models.collaborators_model import Collaborators
 from collaborators.repositories.collaborator_repository import CollaboratorRepository
 from project_invitations.repositories.project_invitation_repository import (
     ProjectInvitationRepository,
 )
-from projects.exceptions.project_exception import ProjectNotFound
 from projects.repositories.project_repository import ProjectRepository
 
-from ..exceptions import RequestAlreadyExists, RequestNotFound
+from ..exceptions import (
+    CollaboratorAlreadyExists,
+    ProjectNotFoundError,
+    RequestAlreadyExists,
+    RequestAlreadyRespondedError,
+    RequestNotFound,
+)
 from ..models.requests_model import Request
 from ..repositories.requests_repository import RequestsRepository
 from ..schemas.requests_schemas import (
@@ -31,17 +35,17 @@ class RequestsService:
         self.project_repository = project_repository
         self.project_invitations_repo = project_invitations_repo
 
+    def _ensure_is_owner(self, project, user_id: int) -> None:
+        if int(project.owner_id) != int(user_id):
+            raise PermissionError("Only the project owner can perform this action")
+
     def create_request(
         self,
         data: RegisterRequestsInputSchema,
         user_id: int,
         project_id: int,
-    ):
-        requests_exists = (
-            self.requests_repository.get_request_by_user_id_and_project_id(
-                user_id, project_id
-            )
-        )
+    ) -> None:
+        requests_exists = self.requests_repository.get_request_by_user_id_and_project_id(user_id, project_id)
         if requests_exists:
             raise RequestAlreadyExists("Request already exists")
 
@@ -53,63 +57,66 @@ class RequestsService:
 
         project = self.project_repository.get_project_by_id(project_id)
         if not project:
-            raise ProjectNotFound("Project not found")
+            raise ProjectNotFoundError("Project not found")
 
-        user_exists = self.collaborator_repository.get_collaborator_by_user_id(user_id)
+        user_exists = self.collaborator_repository.get_collaborator_by_user_id_and_project_id(user_id, project_id)
         if user_exists:
             raise CollaboratorAlreadyExists("User already is a collaborator")
 
         create_request = CreateRequestSchema(
-            **data.dict(), user_id=user_id, project_id=project_id
+            **data.dict(), 
+            user_id=user_id, 
+            project_id=project_id
         )
         request = Request(**create_request.dict())
-        return self.requests_repository.create(request)
+        self.requests_repository.create(request)
 
-    def respond_request(self, request_id: int, user_id: int, accepted: bool):
+    def respond_request(self, request_id: int, user_id: int, accepted: bool) -> None:
         request = self.requests_repository.get_request_by_id(request_id)
         if not request:
             raise RequestNotFound("Request not found")
 
+        if request.status != RequestStatus.PENDING:
+            raise RequestAlreadyRespondedError("This request has already been responded to")
+
         project = self.project_repository.get_project_by_id(request.project_id)
         if not project:
-            raise ProjectNotFound("Project not found")
+            raise ProjectNotFoundError("Project not found")
 
-        if int(project.owner_id) != int(user_id):
-            raise PermissionError("Only the project owner can approve requests")
+        self._ensure_is_owner(project, user_id)
 
-        if accepted and request.status == RequestStatus.PENDING:
+        if accepted:
             request.status = RequestStatus.APPROVED
             self.collaborator_repository.create_collaborator(
-                Collaborators(id_user=user_id, id_project=project.id, role=request.role)
+                Collaborators(
+                    id_user=request.user_id,
+                    id_project=project.id,
+                    role=request.role,
+                )
             )
         else:
             request.status = RequestStatus.REJECTED
-
         self.requests_repository.update(request)
 
-    def get_all_requests(self, project_id: int, user_id: int):
+    def get_all_requests(self, project_id: int, user_id: int) -> list[DetailRequestSchema]:
         project = self.project_repository.get_project_by_id(project_id)
         if not project:
-            raise ProjectNotFound("Project not found")
+            raise ProjectNotFoundError("Project not found")
 
-        if int(project.owner_id) != int(user_id):
-            raise PermissionError("Only the project owner can view requests")
+        self._ensure_is_owner(project, user_id)
 
         requests = self.requests_repository.get_requests_by_project_id(project_id)
         return [DetailRequestSchema.model_validate(request) for request in requests]
 
-    def get_request(self, request_id: int, user_id: int):
+    def get_request(self, request_id: int, user_id: int) -> DetailRequestSchema:
         request = self.requests_repository.get_request_by_id(request_id)
         if not request:
             raise RequestNotFound("Request not found")
 
         project = self.project_repository.get_project_by_id(request.project_id)
         if not project:
-            raise ProjectNotFound("Project not found")
+            raise ProjectNotFoundError("Project not found")
 
-        if int(request.user_id) != int(user_id) and (
-            int(project.owner_id) != int(user_id)
-        ):
-            raise PermissionError("Only the request owner can view this request")
+        self._ensure_is_owner(project, user_id)
 
         return DetailRequestSchema.model_validate(request)
