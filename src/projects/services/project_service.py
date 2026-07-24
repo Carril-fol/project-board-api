@@ -5,7 +5,7 @@ from collaborators.schemas.collaborators_schema import RegisterCollaboratorsInpu
 from ..exceptions.project_exception import (
     ProjectAlreadyHasStatus,
     ProjectInsufficientPrivileges,
-    ProjectNotFound,
+    ProjectNotFoundError,
 )
 from ..models.project import Project
 from ..repositories.project_repository import ProjectRepository
@@ -29,7 +29,7 @@ class ProjectService:
     def _get_project_by_id_or_raise(self, id: int) -> Project:
         project = self.project_repo.get_project_by_id(id)
         if not project:
-            raise ProjectNotFound("Project not found")
+            raise ProjectNotFoundError("Project not found")
         return project
 
     def create_project(self, data: RegisterProjectInputSchema, user_id: int):

@@ -1,4 +1,4 @@
-class ProjectNotFound(Exception):
+class ProjectNotFoundError(Exception):
     pass
 
 

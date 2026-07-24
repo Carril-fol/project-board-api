@@ -1,14 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException
-from fastapi_restful.cbv import cbv
+from fastapi import APIRouter, Depends, Request
+from fastapi_cache.decorator import cache
 
 from core.security.jwt_manager import jwt_required
+from shared.extensions import limiter
 
 from ..dependencies import get_project_service
-from ..exceptions.project_exception import (
-    ProjectAlreadyHasStatus,
-    ProjectInsufficientPrivileges,
-    ProjectNotFound,
-)
 from ..schemas.project_schema import (
     DeleteProjectOutputSchema,
     ListProjectDetail,
@@ -20,67 +16,80 @@ from ..schemas.project_schema import (
 )
 from ..services.project_service import ProjectService
 
-router = APIRouter(prefix="/projects/api/v1", tags=["projects"])
+router = APIRouter(
+    prefix="/projects/api/v1",
+    tags=["projects"],
+    dependencies=[
+        Depends(jwt_required),
+    ],
+)
 
 
-@cbv(router)
-class ProjectController:
-    service: ProjectService = Depends(get_project_service)
-    payload: dict = Depends(jwt_required)
+@router.post("/create", response_model=RegisterProjectOutputSchema, status_code=201)
+@limiter.limit("5/minute")
+def create_project(
+    request: Request,
+    data: RegisterProjectInputSchema,
+    service: ProjectService = Depends(get_project_service),
+    payload: dict = Depends(jwt_required),
+):
+    user_id = payload["sub"]
+    service.create_project(data, user_id)
+    return RegisterProjectOutputSchema(msg="Project created successfully")
 
-    @router.post("/create", response_model=RegisterProjectOutputSchema, status_code=201)
-    async def create_project(self, data: RegisterProjectInputSchema):
-        user_id = self.payload["sub"]
 
-        self.service.create_project(data, user_id)
-        return RegisterProjectOutputSchema(msg="Project created successfully")
+@router.get("/get/{id}", response_model=ProjectDetail, status_code=200)
+@cache(expire=30)
+@limiter.limit("5/minute")
+def get_project(
+    request: Request,
+    id: int,
+    service: ProjectService = Depends(get_project_service),
+    payload: dict = Depends(jwt_required),
+):
+    project = service.detail_project_by_id(id)
+    return project
 
-    @router.get("/get/{id}", response_model=ProjectDetail, status_code=200)
-    async def get_project(self, id: int):
-        try:
-            project = self.service.detail_project_by_id(id)
-            return project
-        except ProjectNotFound:
-            raise HTTPException(status_code=404, detail="Project not found.")
 
-    @router.patch(
-        "/update/{id}", response_model=UpdateProjectOutputSchema, status_code=200
-    )
-    async def update_project(self, id: int, data: UpdateProjectInputSchema):
-        try:
-            user_id = self.payload["sub"]
+@router.patch("/update/{id}", response_model=UpdateProjectOutputSchema, status_code=200)
+@limiter.limit("5/minute")
+def update_project(
+    request: Request,
+    id: int,
+    data: UpdateProjectInputSchema,
+    service: ProjectService = Depends(get_project_service),
+    payload: dict = Depends(jwt_required),
+):
+    user_id = payload["sub"]
+    service.update_project(id, data, user_id)
+    return UpdateProjectOutputSchema(msg="Project updated")
 
-            self.service.update_project(id, data, user_id)
-            return UpdateProjectOutputSchema(msg="Project updated")
-        except ProjectNotFound:
-            raise HTTPException(status_code=404, detail="Project not found.")
-        except ProjectInsufficientPrivileges:
-            raise HTTPException(
-                status_code=404, detail="You don't have privileges for this action."
-            )
 
-    @router.delete(
-        "/delete/{id}", response_model=DeleteProjectOutputSchema, status_code=200
-    )
-    async def delete_project(self, id: int):
-        try:
-            user_id = self.payload["sub"]
-            data = {"status": "CANCELLED"}
+@router.delete(
+    "/delete/{id}", response_model=DeleteProjectOutputSchema, status_code=200
+)
+@limiter.limit("5/minute")
+def delete_project(
+    request: Request,
+    id: int,
+    service: ProjectService = Depends(get_project_service),
+    payload: dict = Depends(jwt_required),
+):
+    user_id = payload["sub"]
+    data = {"status": "CANCELLED"}
+    service.delete_project(id, user_id, data)
+    return DeleteProjectOutputSchema(msg="Project deleted successfully")
 
-            self.service.delete_project(id, user_id, data)
-            return DeleteProjectOutputSchema(msg="Project deleted successfully")
-        except ProjectNotFound:
-            raise HTTPException(status_code=404, detail="Project not found.")
-        except ProjectInsufficientPrivileges:
-            raise HTTPException(
-                status_code=403, detail="You don't have privileges for this action."
-            )
-        except ProjectAlreadyHasStatus:
-            raise HTTPException(
-                status_code=409, detail="The project has already been cancelled."
-            )
 
-    @router.get("/", response_model=ListProjectDetail, status_code=200)
-    async def get_all_project(self, per_page: int = 10, page: int = 1):
-        list_detailed_projects = self.service.get_all_project(per_page, page)
-        return list_detailed_projects
+@router.get("/", response_model=ListProjectDetail, status_code=200)
+@cache(expire=30)
+@limiter.limit("5/minute")
+def get_all_project(
+    request: Request,
+    per_page: int = 10,
+    page: int = 1,
+    service: ProjectService = Depends(get_project_service),
+    payload: dict = Depends(jwt_required),
+):
+    list_detailed_projects = service.get_all_project(per_page, page)
+    return list_detailed_projects
