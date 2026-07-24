@@ -6,11 +6,10 @@ from shared.extensions import limiter
 from ..dependencies import get_auth_service
 from ..exceptions.auth_exception import InvalidCredentialsException
 from ..schemas.auth_schema import (
+    AuthOutputSchema,
     LoginInputSchema,
     LoginOutputSchema,
-    LogoutOutputSchema,
     RegisterInputSchema,
-    RegisterOutputSchema,
 )
 from ..services.auth_services import AuthService
 
@@ -19,7 +18,7 @@ router = APIRouter(prefix="/auth/api/v1", tags=["auth"])
 
 @router.post(
     "/register",
-    response_model=RegisterOutputSchema,
+    response_model=AuthOutputSchema,
     status_code=201,
 )
 @limiter.limit("5/minute")
@@ -29,7 +28,7 @@ def register(
     service: AuthService = Depends(get_auth_service),
 ):
     service.register_user(data)
-    return RegisterOutputSchema(msg="Register successfully")
+    return AuthOutputSchema(msg="Register successfully")
 
 
 @router.post(
@@ -47,20 +46,21 @@ def login(
 ):
     try:
         user_id = service.authenticate(data)
+
         access_token = jwt_manager.create_access_token(user_id=user_id)
         refresh_token = jwt_manager.create_refresh_token(user_id=user_id)
         response.set_cookie(key="access_token", value=access_token)
         response.set_cookie(key="refresh_token", value=refresh_token)
-        return {"access_token": access_token, "refresh_token": refresh_token}
+        return LoginOutputSchema(access_token=access_token, refresh_token=refresh_token)
     except InvalidCredentialsException:
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
 
-@router.post("/logout", response_model=LogoutOutputSchema, status_code=200)
+@router.post("/logout", response_model=AuthOutputSchema, status_code=200)
 def logout(response: Response):
     response.delete_cookie("access_token")
     response.delete_cookie("refresh_token")
-    return LogoutOutputSchema(msg="Logout successfully")
+    return AuthOutputSchema(msg="Logout successfully")
 
 
 @router.get(
