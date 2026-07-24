@@ -4,6 +4,12 @@ from datetime import datetime, timezone
 from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 
 
+def password_strength_check(value: str) -> str:
+    if not any(char in string.punctuation for char in value):
+        raise ValueError("La contraseña debe contener al menos un carácter especial")
+    return value
+
+
 class RegisterInputSchema(BaseModel):
     first_name: str
     last_name: str
@@ -16,14 +22,7 @@ class RegisterInputSchema(BaseModel):
     @field_validator("password")
     @classmethod
     def validate_password(cls, value: str):
-        if len(value) < 8:
-            raise ValueError("La contraseña debe tener al menos 8 caracteres")
-
-        if not any(char in string.punctuation for char in value):
-            raise ValueError(
-                "La contraseña debe contener al menos un carácter especial"
-            )
-        return value
+        return password_strength_check(value)
 
     @model_validator(mode="after")
     def validate_confirm_password(self):
@@ -32,34 +31,19 @@ class RegisterInputSchema(BaseModel):
         return self
 
 
-class RegisterOutputSchema(BaseModel):
-    msg: str = Field(..., examples=["Register successfully"])
-
-
 class LoginInputSchema(BaseModel):
     email: EmailStr
-    password: str
+    password: str = Field(min_length=8, max_length=15)
 
     @field_validator("password")
     @classmethod
     def validate_password(cls, value: str):
-        if len(value) < 8:
-            raise ValueError("La contraseña debe tener al menos 8 caracteres")
-
-        if not any(char in string.punctuation for char in value):
-            raise ValueError(
-                "La contraseña debe contener al menos un carácter especial"
-            )
-        return value
+        return password_strength_check(value)
 
 
 class LoginOutputSchema(BaseModel):
     access_token: str
     refresh_token: str
-
-
-class LogoutOutputSchema(BaseModel):
-    msg: str = Field(..., examples=["Logout successfully"])
 
 
 class UserCreateSchema(BaseModel):
@@ -78,3 +62,7 @@ class UserCreateSchema(BaseModel):
         if isinstance(value, str):
             return value.upper()
         return value
+
+
+class AuthOutputSchema(BaseModel):
+    msg: str
