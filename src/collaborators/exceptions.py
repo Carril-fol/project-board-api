@@ -4,3 +4,7 @@ class CollaboratorNotFound(Exception):
 
 class CollaboratorAlreadyExists(Exception):
     pass
+
+
+class CollaboratorNotAuthorized(Exception):
+    pass

@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Depends
-from fastapi_restful.cbv import cbv
+from fastapi import APIRouter, Depends, Request
+from fastapi_cache.decorator import cache
 
 from core.security.jwt_manager import jwt_required
+from shared.extensions import limiter
 
 from ..dependencies import get_collaborators_service
 from ..schemas.collaborators_schema import (
@@ -13,24 +14,36 @@ from ..services.collaborators_service import CollaboratorService
 router = APIRouter(prefix="/collaborators/api/v1", tags=["collaborators"])
 
 
-@cbv(router)
-class CollaboratorsController:
-    service: CollaboratorService = Depends(get_collaborators_service)
-    payload: dict = Depends(jwt_required)
+@router.get(
+    "/get/{project_id}",
+    response_model=ListDetailCollaboratorsSchema,
+    status_code=200,
+)
+@cache(expire=10)
+@limiter.limit("10/minute")
+def get_collaborators(
+    request: Request,
+    project_id: int,
+    service: CollaboratorService = Depends(get_collaborators_service),
+    payload: dict = Depends(jwt_required),
+):
+    user_id = payload["sub"]
+    return service.get_collaborators(project_id, user_id)
 
-    @router.get("/list/{id_project}", response_model=ListDetailCollaboratorsSchema)
-    def get_collaborators(self, id_project: int):
-        user_id = self.payload["sub"]
 
-        return self.service.get_collaborators(id_project, user_id)
+@router.delete(
+    "/delete/{id_collaborator}",
+    response_model=CollaboratorsOutputSchema,
+    status_code=200,
+)
+@limiter.limit("10/minute")
+def remove_collaborator(
+    request: Request,
+    id_collaborator: int,
+    service: CollaboratorService = Depends(get_collaborators_service),
+    payload: dict = Depends(jwt_required),
+):
+    user_id = payload["sub"]
 
-    @router.delete(
-        "/delete/{id_collaborator}",
-        response_model=CollaboratorsOutputSchema,
-        status_code=200,
-    )
-    def remove_collaborator(self, id_collaborator: int):
-        user_id = self.payload["sub"]
-
-        self.service.remove_collaborator(id_collaborator, user_id)
-        return CollaboratorsOutputSchema(msg="Collaborator removed")
+    service.remove_collaborator(id_collaborator, user_id)
+    return CollaboratorsOutputSchema(msg="Collaborator removed")

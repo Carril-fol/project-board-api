@@ -41,3 +41,11 @@ class CollaboratorRepository:
             .filter(Collaborators.id_user == user_id)
             .first()
         )
+
+    def get_collaborator_by_user_id_and_project_id(self, user_id: int, id_project: int):
+        return (
+            self.db.query(Collaborators)
+            .filter(Collaborators.id_user == user_id)
+            .filter(Collaborators.id_project == id_project)
+            .first()
+        )

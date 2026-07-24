@@ -1,5 +1,10 @@
+from projects.exceptions.project_exception import (
+    ProjectInsufficientPrivileges,
+    ProjectNotFoundError,
+)
 from projects.repositories.project_repository import ProjectRepository
 
+from ..exceptions import CollaboratorNotAuthorized, CollaboratorNotFound
 from ..models.collaborators_model import Collaborators
 from ..repositories.collaborator_repository import CollaboratorRepository
 from ..schemas.collaborators_schema import (
@@ -30,8 +35,14 @@ class CollaboratorService:
         self, id_project: int, user_id: int
     ) -> ListDetailCollaboratorsSchema:
         collaborators_raw = self.repository.get_collaborators_from_project(id_project)
-        if user_id not in [collaborator.id_user for collaborator in collaborators_raw]:
-            raise Exception("You are not a collaborator of this project")
+        collaborators = [
+            int(collaborator.id_user) for collaborator in collaborators_raw
+        ]
+
+        if int(user_id) not in collaborators:
+            raise CollaboratorNotAuthorized(
+                "You are not a collaborator of this project"
+            )
 
         collaborators_list = [
             DetailCollaboratorsSchema.model_validate(collaborator)
@@ -42,14 +53,12 @@ class CollaboratorService:
     def remove_collaborator(self, collaborator_id: int, user_id: int):
         collaborator = self.repository.get_collaborator(collaborator_id)
         if not collaborator:
-            raise Exception("Collaborator not founded")
-
-        project_id = collaborator.id_project
-        project = self.project_repo.get_project_by_id(project_id)
+            raise CollaboratorNotFound("Collaborator not founded")
+        project = self.project_repo.get_project_by_id(collaborator.id_project)
         if not project:
-            raise Exception("Project not founded")
-
+            raise ProjectNotFoundError("Project not founded")
         if project.owner_id != user_id:
-            raise Exception("You are not the owner of this collaborator")
-
+            raise ProjectInsufficientPrivileges(
+                "You are not the owner of this collaborator"
+            )
         self.repository.remove_collaborator(collaborator)
