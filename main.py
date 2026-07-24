@@ -1,28 +1,31 @@
 from fastapi import FastAPI
 from uvicorn import run
 
-from auth.controllers.auth_controller import router as auth_router
-from collaborators.controllers.collaborators_controller import (
-    router as collaborators_router,
+from core.exception_handlers import (
+    register_exception_handlers,
+    register_invitation_exception_handlers,
+    register_project_exception_handlers,
+    register_request_exception_handlers,
 )
-from project_invitations.controllers.project_invitation_controller import (
-    router as project_invitation_router,
-)
-from projects.controllers.project_controller import router as project_router
-from projects_tags.controllers.project_tag_controller import (
-    router as project_tag_router,
-)
-from requests.controllers.requests_controller import router as requests_router
+from core.lifespan import lifespan
+from core.routers import register_routers
+from shared.extensions import limiter
 
-app = FastAPI()
 
-app.include_router(auth_router)
-app.include_router(project_router)
-app.include_router(project_tag_router)
-app.include_router(collaborators_router)
-app.include_router(project_invitation_router)
-app.include_router(requests_router)
+def create_app() -> FastAPI:
+    app = FastAPI(lifespan=lifespan)
+    app.state.limiter = limiter
 
+    register_project_exception_handlers(app)
+    register_invitation_exception_handlers(app)
+    register_request_exception_handlers(app)
+    register_exception_handlers(app)
+
+    register_routers(app)
+    return app
+
+
+app = create_app()
 
 if __name__ == "__main__":
     run(app)
