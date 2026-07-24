@@ -11,6 +11,7 @@ from ..exceptions import (
     RequestAlreadyExists,
     RequestAlreadyRespondedError,
     RequestNotFound,
+    UserAlreadyIsInvited
 )
 from ..models.requests_model import Request
 from ..repositories.requests_repository import RequestsRepository
@@ -53,7 +54,7 @@ class RequestsService:
             project_id, user_id
         )
         if project_invitations:
-            raise Exception("User is already invited to this project")
+            raise UserAlreadyIsInvited("User is already invited to this project")
 
         project = self.project_repository.get_project_by_id(project_id)
         if not project:

@@ -16,3 +16,7 @@ class ProjectNotFoundError(Exception):
 
 class CollaboratorAlreadyExists(Exception):
     pass
+
+
+class UserAlreadyIsInvited(Exception):
+    pass
