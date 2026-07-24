@@ -12,12 +12,16 @@ from projects.exceptions.project_exception import (
     ProjectInsufficientPrivileges,
     ProjectNotFoundError,
 )
+from projects_tags.exceptions import ProjectNotFound, ProjectTagNotFound
 from requests.exceptions import (
     CollaboratorAlreadyExists,
-    ProjectNotFoundError as ProjectNotFoundRequests,
     RequestAlreadyExists,
     RequestAlreadyRespondedError,
     RequestNotFound,
+    UserAlreadyIsInvited,
+)
+from requests.exceptions import (
+    ProjectNotFoundError as ProjectNotFoundRequests,
 )
 
 
@@ -87,9 +91,38 @@ def register_request_exception_handlers(app):
         return JSONResponse(status_code=404, content={"detail": str(exc)})
 
     @app.exception_handler(RequestAlreadyExists)
-    async def request_already_exists_handler(request: Request, exc: RequestAlreadyExists):
+    async def request_already_exists_handler(
+        request: Request, exc: RequestAlreadyExists
+    ):
         return JSONResponse(status_code=400, content={"detail": str(exc)})
 
     @app.exception_handler(RequestAlreadyRespondedError)
-    async def request_already_responded_handler(request: Request, exc: RequestAlreadyRespondedError):
+    async def request_already_responded_handler(
+        request: Request, exc: RequestAlreadyRespondedError
+    ):
         return JSONResponse(status_code=400, content={"detail": str(exc)})
+
+    @app.exception_handler(UserAlreadyIsInvited)
+    async def user_already_is_invited_handler(
+        request: Request, exc: UserAlreadyIsInvited
+    ):
+        return JSONResponse(status_code=400, content={"detail": str(exc)})
+
+
+# Handler exceptions for project tags
+def register_project_tag_exception_handlers(app):
+    @app.exception_handler(Exception)
+    async def handler(request: Request, exc: Exception):
+        return JSONResponse(status_code=500, content={"detail": str(exc)})
+
+    @app.exception_handler(ProjectTagNotFound)
+    async def project_tag_not_found_handler(request: Request, exc: ProjectTagNotFound):
+        return JSONResponse(status_code=404, content={"detail": str(exc)})
+
+    @app.exception_handler(PermissionError)
+    async def permission_error_handler(request: Request, exc: PermissionError):
+        return JSONResponse(status_code=403, content={"detail": str(exc)})
+
+    @app.exception_handler(ProjectNotFound)
+    async def project_not_found_handler(request: Request, exc: ProjectNotFound):
+        return JSONResponse(status_code=404, content={"detail": str(exc)})
