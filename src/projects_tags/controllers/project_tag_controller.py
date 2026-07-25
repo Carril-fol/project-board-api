@@ -1,10 +1,9 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, Request
 
 from core.security.jwt_manager import jwt_required
 from shared.extensions import limiter
 
 from ..dependencies import get_project_tag_service
-from ..exceptions import ProjectTagNotFound
 from ..schemas.project_tag_schema import (
     ProjectTagOutputSchema,
     RegisterProjectTagInputSchema,
@@ -25,6 +24,7 @@ router = APIRouter(
 )
 @limiter.limit("10/minute")
 def create_project_tag(
+    request: Request,
     project_id: int,
     data: RegisterProjectTagInputSchema,
     service: ProjectTagService = Depends(get_project_tag_service),
@@ -42,6 +42,7 @@ def create_project_tag(
 )
 @limiter.limit("10/minute")
 def delete_project_tag(
+    request: Request,
     id_tag: int,
     service: ProjectTagService = Depends(get_project_tag_service),
     payload: dict = Depends(jwt_required),
