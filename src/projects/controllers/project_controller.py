@@ -41,7 +41,7 @@ def create_project(
 @router.get("/get/{id}", response_model=ProjectDetail, status_code=200)
 @cache(expire=30)
 @limiter.limit("5/minute")
-def get_project(
+async def get_project(
     request: Request,
     id: int,
     service: ProjectService = Depends(get_project_service),
@@ -84,7 +84,7 @@ def delete_project(
 @router.get("/", response_model=ListProjectDetail, status_code=200)
 @cache(expire=30)
 @limiter.limit("5/minute")
-def get_all_project(
+async def get_all_project(
     request: Request,
     per_page: int = 10,
     page: int = 1,

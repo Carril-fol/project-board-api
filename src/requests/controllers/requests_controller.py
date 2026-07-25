@@ -99,7 +99,7 @@ def decline(
 )
 @cache(expire=60)
 @limiter.limit("10/minute")
-def get_all(
+async def get_all(
     request: Request,
     project_id: int,
     service: RequestsService = Depends(get_requests_service),
@@ -122,7 +122,7 @@ def get_all(
 )
 @cache(expire=120)
 @limiter.limit("10/minute")
-def get_request(
+async def get_request(
     request: Request,
     request_id: int,
     service: RequestsService = Depends(get_requests_service),

@@ -47,8 +47,5 @@ def delete_project_tag(
     payload: dict = Depends(jwt_required),
 ):
     user_id = payload["sub"]
-    try:
-        service.delete_tag_from_project(id_tag, user_id)
-        return ProjectTagOutputSchema(msg="Project tag deleted")
-    except ProjectTagNotFound as error:
-        raise HTTPException(status_code=404, detail=str(error))
+    service.delete_tag_from_project(id_tag, user_id)
+    return ProjectTagOutputSchema(msg="Project tag deleted")

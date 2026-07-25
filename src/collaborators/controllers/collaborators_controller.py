@@ -19,9 +19,9 @@ router = APIRouter(prefix="/collaborators/api/v1", tags=["collaborators"])
     response_model=ListDetailCollaboratorsSchema,
     status_code=200,
 )
-@cache(expire=10)
+@cache(expire=30)
 @limiter.limit("10/minute")
-def get_collaborators(
+async def get_collaborators(
     request: Request,
     project_id: int,
     service: CollaboratorService = Depends(get_collaborators_service),

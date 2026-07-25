@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends
 
 from core.security.jwt_manager import jwt_required
+from shared.extensions import limiter
 
 from ..dependencies import get_project_invitation_service
 from ..schemas.project_invitations_schemas import (
@@ -17,7 +18,12 @@ router = APIRouter(
 )
 
 
-@router.post("/create", response_model=CreateInvitationOutput, status_code=201)
+@router.post(
+    "/create",
+    response_model=CreateInvitationOutput,
+    status_code=201,
+)
+@limiter.limit("10/minute")
 def create_invitation(
     data: CreateProjectInvitation,
     service: ProjectInvitationService = Depends(get_project_invitation_service),
@@ -48,6 +54,7 @@ def remove_invitation(
 
 
 @router.post("/{token}/accept", response_model=ProjectInvitationOutput, status_code=200)
+@limiter.limit("1/minute")
 def accept_invitation(
     token: str,
     service: ProjectInvitationService = Depends(get_project_invitation_service),
@@ -60,6 +67,7 @@ def accept_invitation(
 
 
 @router.post("/{token}/reject", response_model=ProjectInvitationOutput, status_code=200)
+@limiter.limit("1/minute")
 def reject_invitation(
     token: str,
     service: ProjectInvitationService = Depends(get_project_invitation_service),
