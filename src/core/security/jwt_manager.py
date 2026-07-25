@@ -4,11 +4,11 @@ import jwt
 from fastapi import Depends, HTTPException, Request
 from jwt import ExpiredSignatureError, InvalidTokenError
 
-from shared.config.settings import Config
+from shared.config.settings import settings
 
 
 class JwtManager:
-    SECRET_KEY = Config.SECRET_KEY
+    SECRET_KEY = settings.secret_key
     ALGORITHM = "HS256"
 
     @classmethod
