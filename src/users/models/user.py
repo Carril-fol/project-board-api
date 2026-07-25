@@ -28,4 +28,6 @@ class User(Base):
         DateTime, nullable=False, default=datetime.now
     )
 
-    collaborators = relationship("Collaborators", back_populates="user")
+    collaborators: Mapped["Collaborators"] = relationship(
+        "Collaborators", back_populates="user"
+    )
