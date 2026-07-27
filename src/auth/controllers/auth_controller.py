@@ -57,7 +57,7 @@ def login(
 
 
 @router.post("/logout", response_model=AuthOutputSchema, status_code=200)
-def logout(response: Response):
+def logout(response: Response, payload: dict = Depends(jwt_required)):
     response.delete_cookie("access_token")
     response.delete_cookie("refresh_token")
     return AuthOutputSchema(msg="Logout successfully")
