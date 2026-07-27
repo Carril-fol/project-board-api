@@ -1,0 +1,10 @@
+services:
+  api:
+    build: .
+    image: project-board-api:latest
+    container_name: project-board-api
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
