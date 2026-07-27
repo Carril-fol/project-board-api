@@ -2,6 +2,7 @@ from datetime import datetime, timedelta, timezone
 
 import jwt
 from fastapi import Depends, HTTPException, Request
+from fastapi.security import APIKeyCookie
 from jwt import ExpiredSignatureError, InvalidTokenError
 
 from shared.config.settings import settings
@@ -54,22 +55,19 @@ class JwtManager:
         return payload
 
 
-def get_access_token_from_cookie(request: Request) -> str:
-    token = request.cookies.get("access_token")
+access_token_cookie = APIKeyCookie(name="access_token", auto_error=False)
+refresh_token_cookie = APIKeyCookie(name="refresh_token", auto_error=False)
 
+
+def get_access_token_from_cookie(token: str = Depends(access_token_cookie)) -> str:
     if not token:
         raise HTTPException(status_code=401, detail="Access token not found")
-
     return token
 
 
-def get_refresh_token_from_cookie(request: Request) -> str:
-    print(request.cookies)
-    token = request.cookies.get("refresh_token")
-
+def get_refresh_token_from_cookie(token: str = Depends(refresh_token_cookie)) -> str:
     if not token:
         raise HTTPException(status_code=401, detail="Refresh token not found")
-
     return token
 
 
