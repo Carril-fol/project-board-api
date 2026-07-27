@@ -13,14 +13,14 @@ from project_invitations.models.project_invitation_model import ProjectInvitatio
 from projects.models.project import Project
 from projects_tags.models.project_tag_model import ProjectTag
 from requests.models.requests_model import Request
-from shared.config.settings import Config
+from shared.config.settings import settings
 from shared.database import Base
 from users.models.user import User  # noqa: F401
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
-config.set_main_option("sqlalchemy.url", Config.NEON_DATABASE_URL)
+config.set_main_option("sqlalchemy.url", settings.neon_database_url)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
