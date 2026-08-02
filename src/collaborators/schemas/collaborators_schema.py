@@ -33,5 +33,15 @@ class ListDetailCollaboratorsSchema(BaseModel):
     collaborators: list[DetailCollaboratorsSchema]
 
 
+class UpdateCollaboratorsSchema(BaseModel):
+    role: str
+
+    @field_validator("role", mode="before")
+    @classmethod
+    def convert_to_uppercase(cls, value):
+        if isinstance(value, str):
+            return value.upper()
+        return value
+
 class CollaboratorsOutputSchema(BaseModel):
     msg: str

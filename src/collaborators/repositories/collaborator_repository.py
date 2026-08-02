@@ -1,51 +1,25 @@
-from sqlalchemy.orm import Session
+from sqlalchemy import select
 
 from users.models.user import User
+from shared.database.base_repository import BaseRepository
 
 from ..models.collaborators_model import Collaborators
 
 
-class CollaboratorRepository:
-    def __init__(self, db: Session):
-        self.db = db
+class CollaboratorRepository(BaseRepository[Collaborators]):
 
-    def create_collaborator(self, collaborator: Collaborators):
-        self.db.add(collaborator)
-        self.db.flush()
-        return collaborator
+    def __init__(self, db):
+        super().__init__(Collaborators, db)
 
     def get_collaborators_from_project(self, id_project: int):
-        query = (
-            self.db.query(Collaborators)
-            .join(Collaborators.user)
-            .filter(User.id == Collaborators.id_user)
-            .all()
-        )
-        return query
-
-    def remove_collaborator(self, collaborator):
-        self.db.delete(collaborator)
-        self.db.flush()
-        return collaborator
-
-    def get_collaborator(self, collaborator_id: int):
-        return (
-            self.db.query(Collaborators)
-            .filter(Collaborators.id == collaborator_id)
-            .first()
-        )
+        stmt = select(Collaborators).join(Collaborators.user).filter(User.id == Collaborators.id_user, Collaborators.id_project == id_project)
+        result = self.db.execute(stmt).scalars().fetchall()
+        return result
 
     def get_collaborator_by_user_id(self, user_id: int):
-        return (
-            self.db.query(Collaborators)
-            .filter(Collaborators.id_user == user_id)
-            .first()
-        )
-
+        stmt = select(Collaborators).where(Collaborators.id_user == user_id)
+        return self.db.execute(stmt).scalar_one_or_none()
+    
     def get_collaborator_by_user_id_and_project_id(self, user_id: int, id_project: int):
-        return (
-            self.db.query(Collaborators)
-            .filter(Collaborators.id_user == user_id)
-            .filter(Collaborators.id_project == id_project)
-            .first()
-        )
+        stmt = select(Collaborators).where(Collaborators.id_user == user_id, Collaborators.id_project == id_project)   
+        return self.db.execute(stmt).scalar_one_or_none()
