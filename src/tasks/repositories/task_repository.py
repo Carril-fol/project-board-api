@@ -47,7 +47,7 @@ class TaskRepository(BaseRepository[Task]):
         return False
 
     def get_tasks_from_project_from_user(self, user_id: int, project_id: int):
-        stmt = select(self.model).join(TaskUser).where(TaskUser.user_id == user_id, self.model.project_id == project_id).where()
+        stmt = select(self.model).join(TaskUser).where(TaskUser.user_id == user_id, self.model.project_id == project_id)
         return self.db.execute(stmt).scalars().all()
 
     def get_tasks_with_priority(self, priority: str):
