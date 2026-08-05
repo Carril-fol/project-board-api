@@ -64,11 +64,20 @@ async def get_task(
 async def get_tasks(
     request: Request,
     project_id: int,
+    status: str = None,
+    priority: str = None,
+    user_id: int = None,
     service: TaskService = Depends(get_task_service),
     payload: dict = Depends(jwt_required)
 ):
-    user_id = payload["sub"]
-    tasks = service.get_tasks_by_project(user_id, project_id)
+    current_user_id = payload["sub"]
+    tasks = service.get_tasks_by_project(
+        current_user_id,
+        project_id,
+        status,
+        priority,
+        filter_user_id=user_id
+    )
     return tasks
 
 
@@ -140,57 +149,6 @@ async def unassign_user_from_task(
 
 
 @router.get(
-    "/get/user/{user_id}",
-    response_model=ListDetailTaskOutputSchema,
-    status_code=200,
-)
-@cache(expire=60)
-@limiter.limit("10/minute")
-async def get_tasks_from_user(
-    request: Request,
-    user_id: int,
-    service: TaskService = Depends(get_task_service),
-    payload: dict = Depends(jwt_required)
-):
-    tasks = service.get_tasks_from_user(user_id)
-    return tasks
-
-
-@router.get(
-    "/get/priority/{priority}",
-    response_model=ListDetailTaskOutputSchema,
-    status_code=200,
-)
-@cache(expire=60)
-@limiter.limit("10/minute")
-async def get_tasks_by_priority(
-    request: Request,
-    priority: str,
-    service: TaskService = Depends(get_task_service),
-    payload: dict = Depends(jwt_required)
-):
-    tasks = service.get_tasks_by_priority(priority)
-    return tasks
-
-
-@router.get(
-    "/get/status/{status}",
-    response_model=ListDetailTaskOutputSchema,
-    status_code=200,
-)
-@cache(expire=60)
-@limiter.limit("10/minute")
-async def get_tasks_by_status(
-    request: Request,
-    status: str,
-    service: TaskService = Depends(get_task_service),
-    payload: dict = Depends(jwt_required)
-):
-    tasks = service.get_tasks_by_status(status)
-    return tasks
-
-
-@router.get(
     "/get/search/{search_term}",
     response_model=ListDetailTaskOutputSchema,
     status_code=200,
@@ -205,3 +163,4 @@ async def get_tasks_by_title_or_description(
 ):
     tasks = service.get_tasks_by_title_or_description(search_term)
     return tasks
+

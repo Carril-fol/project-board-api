@@ -9,11 +9,17 @@ class TaskRepository(BaseRepository[Task]):
     def __init__(self, db):
         super().__init__(Task, db)
 
-    def get_tasks_by_project(self, project_id: int):
-        return self.db.execute(
-            select(self.model).
-            where(self.model.project_id == project_id)
-        ).scalars().all()
+    def get_tasks_by_project(self, project_id: int, status: str = None, priority: str = None, user_id: int = None):
+        stmt = select(self.model).where(self.model.project_id == project_id)
+
+        if status:
+            stmt = stmt.where(self.model.status == status)
+        if priority:
+            stmt = stmt.where(self.model.priority == priority)
+        if user_id:
+            stmt = stmt.join(TaskUser).where(TaskUser.user_id == user_id)
+
+        return self.db.execute(stmt).scalars().all()
 
     def assign_user(self, task_id: int, user_id: int):
         stmt = select(TaskUser).where(
@@ -40,21 +46,29 @@ class TaskRepository(BaseRepository[Task]):
             return True
         return False
 
-    def get_tasks_from_user(self, user_id: int):
-        stmt = select(Task).join(TaskUser).where(TaskUser.user_id == user_id)
+    def get_tasks_from_project_from_user(self, user_id: int, project_id: int):
+        stmt = select(self.model).join(TaskUser).where(TaskUser.user_id == user_id, self.model.project_id == project_id).where()
         return self.db.execute(stmt).scalars().all()
 
     def get_tasks_with_priority(self, priority: str):
-        stmt = select(Task).where(Task.priority == priority)
+        stmt = select(self.model).where(self.model.priority == priority)
         return self.db.execute(stmt).scalars().all()
 
     def get_tasks_by_title_or_description(self, search_term: str):
-        stmt = select(Task).where(
-            (Task.title.ilike(f"%{search_term}%")) |
-            (Task.description.ilike(f"%{search_term}%"))
+        stmt = select(self.model).where(
+            (self.model.title.ilike(f"%{search_term}%")) |
+            (self.model.description.ilike(f"%{search_term}%"))
         )
         return self.db.execute(stmt).scalars().all()
 
     def get_tasks_by_status(self, status: str):
-        stmt = select(Task).where(Task.status == status)
+        stmt = select(self.model).where(self.model.status == status)
+        return self.db.execute(stmt).scalars().all()
+
+    def get_tasks_by_status_and_priority_from_project(self, status: str, priority: str, project_id: int):
+        stmt = select(self.model).where(
+            self.model.status == status,
+            self.model.priority == priority,
+            self.model.project_id == project_id
+        )
         return self.db.execute(stmt).scalars().all()

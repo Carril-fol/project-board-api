@@ -58,9 +58,7 @@ class TaskService:
 
     def delete_task(self, task_id: int, user_id: int):
         task = self._get_task(task_id)
-
         self._require_project_owner(task.project_id, user_id)
-        
         self.repo.delete(task_id)
 
     def update_task(self, task_id: int, data: UpdateTaskInputSchema, user_id: int):
@@ -101,16 +99,21 @@ class TaskService:
 
         return DetailTaskOutputSchema.model_validate(task).model_dump()
 
-    def get_tasks_by_project(self, user_id: int, project_id: int):
+    def get_tasks_by_project(self, user_id: int, project_id: int, status: str = None, priority: str = None, filter_user_id: int = None):
         if not self.collaborator_repo.get_collaborator_by_user_id_and_project_id(user_id, project_id):
             raise PermissionError("User is not a collaborator of the project")
 
-        tasks_raw = self.repo.get_tasks_by_project(project_id)
-        tasks_formated = self._format_tasks(tasks_raw).tasks
+        tasks_raw = self.repo.get_tasks_by_project(
+            project_id=project_id,
+            status=status,
+            priority=priority,
+            user_id=filter_user_id
+        )
+        tasks_formated = self._format_tasks(tasks_raw)
         return tasks_formated
 
-    def get_tasks_from_user(self, user_id: int):
-        tasks = self.repo.get_tasks_from_user(user_id)
+    def get_tasks_from_user(self, user_id: int, project_id: int):
+        tasks = self.repo.get_tasks_from_project_from_user(user_id, project_id)
         return self._format_tasks(tasks)
 
     def get_tasks_by_priority(self, priority: str):
