@@ -1,0 +1,105 @@
+from fastapi import APIRouter, Depends, Request
+from fastapi_cache.decorator import cache
+
+from core.security.jwt_manager import jwt_required
+from shared.extensions import limiter
+
+from ..services.comment_service import CommentService
+from ..dependencies import get_comments_service
+from ..schemas.comment_schema import (
+    RegisterCommentInputSchema,
+    CommentOutputSchema,
+    ListDetailCommentOutputSchema,
+    DetailCommentOutputSchema,
+    UpdateCommentSchema
+)
+
+router = APIRouter(prefix="/comments/api/v1", tags=["comments"])
+
+
+@router.post(
+    "/create/{task_id}",
+    response_model=CommentOutputSchema,
+    status_code=201,
+)
+@limiter.limit("10/minute")
+async def create_comment(
+    request: Request,
+    data: RegisterCommentInputSchema,
+    task_id: int,
+    service: CommentService = Depends(get_comments_service),
+    payload: dict = Depends(jwt_required)
+):
+    user_id = payload["sub"]
+    service.create_comment(data, user_id, task_id)
+    return CommentOutputSchema(msg="Comment created")
+
+
+@router.get(
+    "/get/{comment_id}",
+    response_model=DetailCommentOutputSchema,
+    status_code=200
+)
+@limiter.limit("10/minute")
+async def get_comment(
+    request: Request,
+    comment_id: int,
+    service: CommentService = Depends(get_comments_service),
+    payload: dict = Depends(jwt_required)
+):
+    user_id = payload["sub"]
+    comment = service.get_comment_by_id(comment_id, user_id)
+    return comment
+
+
+@router.get(
+    "/get/all/{task_id}",
+    response_model=ListDetailCommentOutputSchema,
+    status_code=200
+)
+@cache(expire=60)
+@limiter.limit("10/minute")
+async def get_comment_from_tasks(
+    request: Request,
+    task_id: int,
+    service: CommentService = Depends(get_comments_service),
+    payload: dict = Depends(jwt_required)
+):
+    user_id = payload["sub"]
+    comments = service.get_comments_by_task_id(task_id, user_id)
+    return comments
+
+
+@router.put(
+    "/update/{comment_id}",
+    response_model=CommentOutputSchema,
+    status_code=200
+)
+@limiter.limit("10/minute")
+def update_comment(
+    request: Request,
+    data: UpdateCommentSchema,
+    comment_id: int,
+    service: CommentService = Depends(get_comments_service),
+    payload: dict = Depends(jwt_required)
+):
+    user_id = payload["sub"]
+    service.update_comment(data, user_id, comment_id)
+    return CommentOutputSchema(msg="Comment updated")
+
+
+@router.delete(
+    "/delete/{comment_id}",
+    response_model=CommentOutputSchema,
+    status_code=200
+)
+@limiter.limit("10/minute")
+def delete_comment(
+    request: Request,
+    comment_id: int,
+    service: CommentService = Depends(get_comments_service),
+    payload: dict = Depends(jwt_required)
+):
+    user_id = payload["sub"]
+    service.delete_comment(comment_id, user_id)
+    return CommentOutputSchema(msg="Comment deleted")
