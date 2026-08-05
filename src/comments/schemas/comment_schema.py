@@ -30,6 +30,9 @@ class DetailCommentOutputSchema(CommentBaseSchema):
     
 class ListDetailCommentOutputSchema(BaseModel):
     comments: list[DetailCommentOutputSchema] = Field(..., description="List of comments")
+    total: int = Field(..., description="Total number of comments")
+    limit: int = Field(..., description="Number of comments per page")
+    offset: int = Field(..., description="Current offset")
     
 
 class UpdateCommentSchema(BaseModel):
