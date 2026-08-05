@@ -62,11 +62,13 @@ async def get_comment(
 async def get_comment_from_tasks(
     request: Request,
     task_id: int,
+    limit: int = 20,
+    offset: int = 0,
     service: CommentService = Depends(get_comments_service),
     payload: dict = Depends(jwt_required)
 ):
     user_id = payload["sub"]
-    comments = service.get_comments_by_task_id(task_id, user_id)
+    comments = service.get_comments_by_task_id(task_id, user_id, limit, offset)
     return comments
 
 
