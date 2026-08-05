@@ -11,6 +11,11 @@ from ..schemas.task_schemas import (
     DetailTaskOutputSchema, 
     UpdateTaskInputSchema
 )
+from ..exceptions import (
+    TaskNotFound,
+    TaskUserHasNotPermission,
+    TaskUserIsNotAnCollaborator
+)
 
 
 class TaskService:
@@ -29,24 +34,21 @@ class TaskService:
     def _get_task(self, task_id: int):
         task = self.repo.get_by_id(task_id)
         if not task:
-            raise HTTPException(status_code=404, detail="Task not found")
+            raise TaskNotFound()
         return task
 
     def _require_project_owner(self, project_id: int, user_id: int):
         collaborator = self.collaborator_repo.get_collaborator_by_user_id_and_project_id(user_id, project_id)
-
         if not collaborator:
-            raise PermissionError("User is not a collaborator of the project")
-
+            raise TaskUserIsNotAnCollaborator()
         if collaborator.role != "OWNER":
-            raise PermissionError("User does not have permission")
-
+            raise TaskUserHasNotPermission()
         return collaborator
 
     def create(self, data: RegisterTaskInputSchema, user_id: int, project_id: int):
         collaborator = self.collaborator_repo.get_collaborator_by_user_id_and_project_id(user_id, project_id)
         if not collaborator:
-            raise PermissionError("User is not a collaborator of the project")
+            raise TaskUserHasNotPermission()
 
         task_data = data.model_dump()
         task_data["project_id"] = project_id
@@ -63,12 +65,10 @@ class TaskService:
 
     def update_task(self, task_id: int, data: UpdateTaskInputSchema, user_id: int):
         task = self._get_task(task_id)
-
         self._require_project_owner(task.project_id, user_id)
-
+        
         for key, value in data.model_dump().items():
             setattr(task, key, value)
-
         self.repo.update(task)
 
     def assign_user_to_task(self, task_id: int, target_user_id: int, actor_user_id: int):
@@ -76,27 +76,23 @@ class TaskService:
 
         actor_collab = self.collaborator_repo.get_collaborator_by_user_id_and_project_id(actor_user_id, task.project_id)
         if not actor_collab or actor_collab.role != "OWNER":
-            raise PermissionError("Only the project owner can assign users to tasks")
+            raise TaskUserHasNotPermission()
 
         target_collab = self.collaborator_repo.get_collaborator_by_user_id_and_project_id(target_user_id, task.project_id)
         if not target_collab:
-            raise PermissionError("The target user is not a collaborator of this project")
+            raise TaskUserIsNotAnCollaborator()
 
         self.repo.assign_user(task_id, target_user_id)
 
     def unassign_user_from_task(self, task_id: int, user_id: int):
         task = self._get_task(task_id)
-
         self._require_project_owner(task.project_id, user_id)
-
         self.repo.unassign_user(task_id, user_id)
 
     def get_task_by_id(self, task_id: int, user_id: int) -> DetailTaskOutputSchema:
         task = self._get_task(task_id)
-
         if not self.collaborator_repo.get_collaborator_by_user_id_and_project_id(user_id, task.project_id):
-            raise PermissionError("User is not a collaborator of the project")
-
+            raise TaskUserIsNotAnCollaborator()
         return DetailTaskOutputSchema.model_validate(task).model_dump()
 
     def get_tasks_by_project(self, user_id: int, project_id: int, status: str = None, priority: str = None, filter_user_id: int = None):
