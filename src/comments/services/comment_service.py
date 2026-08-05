@@ -1,7 +1,4 @@
-from fastapi import HTTPException
-
 from collaborators.repositories.collaborator_repository import CollaboratorRepository
-from projects.repositories.project_repository import ProjectRepository
 from tasks.repositories.task_repository import TaskRepository
 
 from ..models.comment_model import Comment
@@ -12,6 +9,12 @@ from ..schemas.comment_schema import (
     RegisterCommentInputSchema, 
     CreateCommentSchema,
     UpdateCommentSchema
+)
+from ..exceptions import (
+    CommentUserIsNotFromProject,
+    CommentNotFound,
+    CommentUserHasNoPrivileges,
+    CommentTaskNotFound,
 )
 
 class CommentService:
@@ -36,19 +39,19 @@ class CommentService:
     def _is_user_collaborator(self, user_id: int, project_id: int):
         collaborator = self.collaborator_repository.get_collaborator_by_user_id_and_project_id(user_id, project_id)
         if not collaborator:
-            raise HTTPException(status_code=403, detail="User is not a collaborator of the project")
+            raise CommentUserIsNotFromProject()
         return True
 
     def _get_task(self, task_id: int):
         task = self.task_repository.get_by_id(task_id)
         if not task:
-            raise HTTPException(status_code=404, detail="Task not found")
+            raise CommentTaskNotFound()
         return task
     
     def _get_comment(self, comment_id: int):
         comment = self.comment_repository.get_by_id(comment_id)
         if not comment:
-            raise HTTPException(status_code=404, detail="Comment not found")
+            raise CommentNotFound()
         return comment
 
 
@@ -65,34 +68,49 @@ class CommentService:
         
         self.comment_repository.create(comment_entity)
 
-    def update_comment(self, data: UpdateCommentSchema, user_id: int, comment_id: int):        
+    def update_comment(self, data: UpdateCommentSchema, user_id: int, comment_id: int):
         comment = self._get_comment(comment_id)
-        
+
+        if comment.user_id != user_id:
+            raise CommentUserHasNoPrivileges()
+
         project_id = self.task_repository.get_by_id(comment.task_id).project_id
         self._is_user_collaborator(user_id, project_id)
-        
+
         for key, value in data.model_dump().items():
             setattr(comment, key, value)
-            
+
         self.comment_repository.update(comment)
         
     def delete_comment(self, comment_id: int, user_id: int):
-        comment = self._get_task(comment_id)
+        comment = self._get_comment(comment_id)
+
+        if comment.user_id != user_id:
+            raise CommentUserHasNoPrivileges()
         
-        task_id = comment.task_id
-        self._get_task(task_id)
-        
-        project_id = self.task_repository.get_by_id(task_id).project_id
+        project_id = self.task_repository.get_by_id(comment.task_id).project_id
         self._is_user_collaborator(user_id, project_id)
-        
+
         self.comment_repository.delete(comment.id)
         
-    def get_comments_by_task_id(self, task_id: int, user_id: int):
-        project_id = self.task_repository.get_by_id(task_id).project_id
-        self._is_user_collaborator(user_id, project_id)
-        
-        comments = self.comment_repository.get_comments_by_task_id(task_id)
-        return self._format_comments(comments)
+    def get_comments_by_task_id(self, task_id: int, user_id: int, limit: int = 20, offset: int = 0):
+        if not self.comment_repository.verify_user_access_to_task(user_id, task_id):
+            raise CommentUserHasNoPrivileges()
+
+        comments = self.comment_repository.get_comments_by_task_id(task_id, limit, offset)
+        total = self.comment_repository.get_comments_count_by_task_id(task_id)
+
+        comments_formatted = [
+            DetailCommentOutputSchema.model_validate(comment)
+            for comment in comments
+        ]
+
+        return ListDetailCommentOutputSchema(
+            comments=comments_formatted,
+            total=total,
+            limit=limit,
+            offset=offset
+        )
     
     def get_comment_by_id(self, comment_id: int, user_id: int):
         comment = self._get_comment(comment_id)
