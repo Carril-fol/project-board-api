@@ -1,7 +1,7 @@
 from sqlalchemy import select
 
 from shared.database.base_repository import BaseRepository
-from ..models.task_model import Task
+from ..models.task_model import Task, TaskStatus
 from ..models.task_user_model import TaskUser
 
 class TaskRepository(BaseRepository[Task]):
@@ -10,7 +10,10 @@ class TaskRepository(BaseRepository[Task]):
         super().__init__(Task, db)
 
     def get_tasks_by_project(self, project_id: int, status: str = None, priority: str = None, user_id: int = None):
-        stmt = select(self.model).where(self.model.project_id == project_id)
+        stmt = select(self.model).where(
+            self.model.project_id == project_id,
+            self.model.parent_id == None
+        )
 
         if status:
             stmt = stmt.where(self.model.status == status)
@@ -47,7 +50,11 @@ class TaskRepository(BaseRepository[Task]):
         return False
 
     def get_tasks_from_project_from_user(self, user_id: int, project_id: int):
-        stmt = select(self.model).join(TaskUser).where(TaskUser.user_id == user_id, self.model.project_id == project_id)
+        stmt = select(self.model).join(TaskUser).where(
+            TaskUser.user_id == user_id,
+            self.model.project_id == project_id,
+            self.model.parent_id == None
+        )
         return self.db.execute(stmt).scalars().all()
 
     def get_tasks_with_priority(self, priority: str):
@@ -69,6 +76,19 @@ class TaskRepository(BaseRepository[Task]):
         stmt = select(self.model).where(
             self.model.status == status,
             self.model.priority == priority,
-            self.model.project_id == project_id
+            self.model.project_id == project_id,
+            self.model.parent_id == None
         )
         return self.db.execute(stmt).scalars().all()
+
+    def get_subtasks(self, task_id: int):
+        stmt = select(self.model).where(self.model.parent_id == task_id)
+        return self.db.execute(stmt).scalars().all()
+
+    def count_open_subtasks(self, task_id: int):
+        stmt = select(self.model).where(
+            self.model.parent_id == task_id,
+            self.model.status != TaskStatus.DONE
+        )
+        result = self.db.execute(stmt).scalars().all()
+        return len(result)
