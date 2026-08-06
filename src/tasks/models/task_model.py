@@ -3,7 +3,7 @@ from enum import Enum
 
 from sqlalchemy import DateTime, Integer, String, ForeignKey
 from sqlalchemy import Enum as SQLEnum
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from shared.database import Base
 
@@ -54,7 +54,28 @@ class Task(Base):
         default=lambda: datetime.now(timezone.utc),
         nullable=False,
     )
+    parent_id: Mapped[int | None] = mapped_column(
+        ForeignKey("tasks.id", ondelete="SET NULL"),
+        nullable=True
+    )
+    parent: Mapped["Task"] = relationship(
+        "Task",
+        remote_side=[id],
+        back_populates="subtasks"
+    )
+    subtasks: Mapped[list["Task"]] = relationship(
+        "Task",
+        back_populates="parent"
+    )
     expiration_date: Mapped[datetime | None] = mapped_column(
         DateTime(timezone=True),
         nullable=True,
     )
+    
+    @property
+    def progress(self) -> float:
+        total = len(self.subtasks)
+        if total == 0:
+            return 0.0
+        completed = [subtask for subtask in self.subtasks if subtask.status == "DONE"]
+        return (len(completed) / total) * 100
