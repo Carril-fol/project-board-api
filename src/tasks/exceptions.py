@@ -12,3 +12,7 @@ class TaskUserIsNotAnCollaborator(Exception):
     def __init__(self, message="User is not an collaborator"):
         self.message = message
         
+        
+class TaskCannotCompleted(Exception):
+    def __init__(self, message="Cannot complete task while subtasks are still open"):
+        self.message = message
