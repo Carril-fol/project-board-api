@@ -1,5 +1,3 @@
-from fastapi import HTTPException
-
 from collaborators.repositories.collaborator_repository import CollaboratorRepository
 
 from ..repositories.task_repository import TaskRepository
@@ -50,6 +48,13 @@ class TaskService:
         if not collaborator:
             raise TaskUserHasNotPermission()
 
+        if data.parent_id:
+            parent_task = self.repo.get_by_id(data.parent_id)
+            if not parent_task:
+                raise TaskNotFound()
+            if parent_task.project_id != project_id:
+                raise TaskUserHasNotPermission()
+
         task_data = data.model_dump()
         task_data["project_id"] = project_id
 
@@ -66,8 +71,13 @@ class TaskService:
     def update_task(self, task_id: int, data: UpdateTaskInputSchema, user_id: int):
         task = self._get_task(task_id)
         self._require_project_owner(task.project_id, user_id)
-        
-        for key, value in data.model_dump().items():
+
+        if data.status == "DONE":
+            open_subtasks = self.repo.count_open_subtasks(task_id)
+            if open_subtasks > 0:
+                raise PermissionError("Cannot complete task while subtasks are still open")
+
+        for key, value in data.model_dump(exclude_unset=True).items():
             setattr(task, key, value)
         self.repo.update(task)
 
