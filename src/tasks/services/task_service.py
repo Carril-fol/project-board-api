@@ -12,7 +12,8 @@ from ..schemas.task_schemas import (
 from ..exceptions import (
     TaskNotFound,
     TaskUserHasNotPermission,
-    TaskUserIsNotAnCollaborator
+    TaskUserIsNotAnCollaborator,
+    TaskCannotCompleted
 )
 
 
@@ -75,7 +76,7 @@ class TaskService:
         if data.status == "DONE":
             open_subtasks = self.repo.count_open_subtasks(task_id)
             if open_subtasks > 0:
-                raise PermissionError("Cannot complete task while subtasks are still open")
+                raise TaskCannotCompleted()
 
         for key, value in data.model_dump(exclude_unset=True).items():
             setattr(task, key, value)
