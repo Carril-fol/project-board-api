@@ -12,7 +12,8 @@ class TaskRepository(BaseRepository[Task]):
     def get_tasks_by_project(self, project_id: int, status: str = None, priority: str = None, user_id: int = None):
         stmt = select(self.model).where(
             self.model.project_id == project_id,
-            self.model.parent_id == None
+            self.model.parent_id == None,
+            self.model.deleted_at == None
         )
 
         if status:
@@ -53,23 +54,31 @@ class TaskRepository(BaseRepository[Task]):
         stmt = select(self.model).join(TaskUser).where(
             TaskUser.user_id == user_id,
             self.model.project_id == project_id,
-            self.model.parent_id == None
+            self.model.parent_id == None,
+            self.model.deleted_at == None
         )
         return self.db.execute(stmt).scalars().all()
 
     def get_tasks_with_priority(self, priority: str):
-        stmt = select(self.model).where(self.model.priority == priority)
+        stmt = select(self.model).where(
+            self.model.priority == priority,
+            self.model.deleted_at == None
+        )
         return self.db.execute(stmt).scalars().all()
 
     def get_tasks_by_title_or_description(self, search_term: str):
         stmt = select(self.model).where(
             (self.model.title.ilike(f"%{search_term}%")) |
-            (self.model.description.ilike(f"%{search_term}%"))
+            (self.model.description.ilike(f"%{search_term}%")),
+            self.model.deleted_at == None
         )
         return self.db.execute(stmt).scalars().all()
 
     def get_tasks_by_status(self, status: str):
-        stmt = select(self.model).where(self.model.status == status)
+        stmt = select(self.model).where(
+            self.model.status == status,
+            self.model.deleted_at == None
+        )
         return self.db.execute(stmt).scalars().all()
 
     def get_tasks_by_status_and_priority_from_project(self, status: str, priority: str, project_id: int):
@@ -77,18 +86,23 @@ class TaskRepository(BaseRepository[Task]):
             self.model.status == status,
             self.model.priority == priority,
             self.model.project_id == project_id,
-            self.model.parent_id == None
+            self.model.parent_id == None,
+            self.model.deleted_at == None
         )
         return self.db.execute(stmt).scalars().all()
 
     def get_subtasks(self, task_id: int):
-        stmt = select(self.model).where(self.model.parent_id == task_id)
+        stmt = select(self.model).where(
+            self.model.parent_id == task_id,
+            self.model.deleted_at == None
+        )
         return self.db.execute(stmt).scalars().all()
 
     def count_open_subtasks(self, task_id: int):
         stmt = select(self.model).where(
             self.model.parent_id == task_id,
-            self.model.status != TaskStatus.DONE
+            self.model.status != TaskStatus.DONE,
+            self.model.deleted_at == None
         )
         result = self.db.execute(stmt).scalars().all()
         return len(result)

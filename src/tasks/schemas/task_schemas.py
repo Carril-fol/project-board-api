@@ -12,7 +12,6 @@ class TaskBaseSchema(BaseModel):
     priority: TaskPriority = Field(..., description="Priority level of the task (LOW, MEDIUM, HIGH)")
     expiration_date: Optional[datetime] = Field(None, description="Optional deadline for the task completion")
 
-
 class RegisterTaskInputSchema(TaskBaseSchema):
     parent_id: Optional[int] = Field(None, description="The ID of the parent task if this is a subtask")
 
@@ -42,7 +41,8 @@ class DetailTaskOutputSchema(BaseModel):
     parent_id: Optional[int] = Field(None, description="The ID of the parent task, if applicable")
     subtasks: list["DetailTaskOutputSchema"] = Field(default=[], description="List of nested subtasks for this task")
     progress: float = Field(..., description="Automatic progress calculation based on completed subtasks (0-100%)")
-
+    deleted_at: Optional[datetime] = Field(None, description="Optional deadline for the task completion")
+    
     class Config:
         from_attributes = True
 

@@ -1,4 +1,7 @@
+from datetime import datetime, timezone
+
 from collaborators.repositories.collaborator_repository import CollaboratorRepository
+from audit_logs.services.audit_log_service import AuditLogService
 
 from ..repositories.task_repository import TaskRepository
 from ..models.task_model import Task
@@ -19,9 +22,15 @@ from ..exceptions import (
 
 class TaskService:
 
-    def __init__(self, repo: TaskRepository, collaborator_repo: CollaboratorRepository):
+    def __init__(
+        self, 
+        repo: TaskRepository, 
+        collaborator_repo: CollaboratorRepository,
+        audit_log_service: AuditLogService
+    ):
         self.repo = repo
         self.collaborator_repo = collaborator_repo
+        self.audit_log_service = audit_log_service
 
     def _format_tasks(self, tasks):
         tasks_formatted = [
@@ -67,11 +76,29 @@ class TaskService:
     def delete_task(self, task_id: int, user_id: int):
         task = self._get_task(task_id)
         self._require_project_owner(task.project_id, user_id)
-        self.repo.delete(task_id)
+        
+        old_state = task.to_dict()
+        
+        task.deleted_at = datetime.now(timezone.utc)
+        
+        self.repo.update(task)
+
+        new_state = task.to_dict()
+        
+        self.audit_log_service.record_diff(
+            user_id,
+            "Task",
+            task.id,
+            "delete_task",
+            old_state,
+            new_state
+        )
 
     def update_task(self, task_id: int, data: UpdateTaskInputSchema, user_id: int):
         task = self._get_task(task_id)
         self._require_project_owner(task.project_id, user_id)
+        
+        old_state = task.to_dict()
 
         if data.status == "DONE":
             open_subtasks = self.repo.count_open_subtasks(task_id)
@@ -80,6 +107,18 @@ class TaskService:
 
         for key, value in data.model_dump(exclude_unset=True).items():
             setattr(task, key, value)
+            
+        new_state = task.to_dict()
+        
+        self.audit_log_service.record_diff(
+            user_id,
+            "Task",
+            task.id,
+            "update_task",
+            old_state,
+            new_state
+        )
+        
         self.repo.update(task)
 
     def assign_user_to_task(self, task_id: int, target_user_id: int, actor_user_id: int):

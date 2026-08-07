@@ -1,11 +1,12 @@
-from datetime import datetime, timezone
 from enum import Enum
+from datetime import datetime, timezone
 
 from sqlalchemy import DateTime, Integer, String, ForeignKey
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from shared.database import Base
+
 
 class TaskStatus(str, Enum):
     REVIEW = "REVIEW"
@@ -71,6 +72,15 @@ class Task(Base):
         DateTime(timezone=True),
         nullable=True,
     )
+    deleted_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        default=None,
+    )
+    
+    @property
+    def is_deleted(self) -> bool:
+        return self.deleted_at is not None
     
     @property
     def progress(self) -> float:
